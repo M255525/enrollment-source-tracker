@@ -2,7 +2,7 @@
 
 辦訓單位／講師用：每個招生管道一條專屬報名連結＋QR（Google 表單預先填入／`?src=`／UTM）→ 匯入報名名單（CSV／xlsx／貼上）→ 各管道報名數、報名率、每位報名成本、錄取／繳費／到課漏斗、每日累積 vs 進度線、截止前能否額滿、規則式建議。多個招生班別。
 
-2026-11-18 建立。使用者從「辦訓單位方向」第二輪清單挑第 15 項；規格由 Claude 決定；無序號。**尚未上線**（部署前先問使用者）。本機 port **8895**（`.claude/launch.json` 的 `enrollment-source-tracker`、程式牆 `LOCAL_APPS`）。
+2026-11-18 建立。使用者從「辦訓單位方向」第二輪清單挑第 15 項；規格由 Claude 決定；無序號。**2026-11-18 已上線** <https://m255525.github.io/enrollment-source-tracker/>（使用者自己 `gh repo create … --push`；Claude 開 Pages、補 master 部署規則、workflow_dispatch 一次成功）。線上 `ET_BASE=https://m255525.github.io/enrollment-source-tracker/ python tools/e2e_et.py` 37 項全過。已加程式牆與 github-dashboard `REPO_META`、AI 工具導航（`subsidy` 情境）。本機預覽 port **8895**。上線改版要升 `service-worker.js` 的 `CACHE_NAME`。
 
 ## 為什麼沒有點擊統計
 純靜態網站沒有後端、無法做轉址計數；點擊數由使用者從 FB／LINE 後台抄進來（選填）。追蹤靠「連結帶來源代碼 → 報名表存下來 → 匯入時歸戶」。若日後要自動計點擊，需要另做 Cloudflare Worker 轉址（未做）。
@@ -25,6 +25,3 @@
 
 ## 標準配備
 跑馬燈（不可關）、⚙ 常用設定（收合：顯示、💾 備份與還原、📘 範例、清除全部資料、關於本工具）、首訪警語＋頁面入口、`manual.html#creator`（改 `tools/manual_body.html` 後跑 `python tools/build_manual.py`）、PWA（`tools/make_icons.py`；上線改版升 `service-worker.js` 的 `CACHE_NAME`）、訪客計數器 `m255525.enrollmentsourcetracker`。無序號。
-
-## 上線時要做
-請使用者跑 `! gh repo create M255525/enrollment-source-tracker --public --source . --remote origin --push` → 開 Pages、補 master 部署規則、`gh workflow run pages.yml` → 線上 e2e → 程式牆 `LOCAL_APPS`→`REPO_META`（github-dashboard 一起補）→ AI 工具導航 `TOOLS`＋`subsidy` 情境（招生海報之後）→ 專案目錄.docx、工作區 CLAUDE.md、memory 改已上線。
