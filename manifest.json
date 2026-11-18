@@ -1,0 +1,16 @@
+{
+  "name": "招生成效追蹤",
+  "short_name": "招生追蹤",
+  "description": "每個招生管道一條專屬報名連結與 QR code，匯入報名名單後看哪個管道最有效",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F4F5F1",
+  "theme_color": "#F4F5F1",
+  "lang": "zh-TW",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

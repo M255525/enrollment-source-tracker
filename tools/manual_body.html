@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>招生成效追蹤・操作手冊</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0B0B0B;--sub:#52514E;--bg:#F4F5F1;--paper:#FFFFFF;--line:#DEDFD8;--blue:#2A78D6;--orange:#EB6834;--red:#B42318}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;font-size:17px;line-height:1.75}
+main{max-width:800px;margin:0 auto;padding:20px 16px 48px}
+h1,h2{font-weight:900;line-height:1.35}
+h1{font-size:30px;margin:0 0 6px}
+h2{font-size:22px;margin:4px 0 8px;display:flex;gap:.5rem;align-items:center}
+h2 b{background:var(--ink);color:#fff;border-radius:50%;width:1.7rem;height:1.7rem;display:inline-grid;place-items:center;font-size:.9rem}
+section{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 18px 14px;margin-top:14px}
+a{color:var(--blue);font-weight:700}
+li{margin:5px 0}
+ol,ul{padding-left:1.3em}
+code{background:#ECEDE7;border-radius:4px;padding:0 5px;font-size:.92em}
+.red{color:var(--red);font-weight:900}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:480px}
+th,td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+th{background:#F4F5F1}
+@media print{body{background:#fff}section{break-inside:avoid}}
+</style>
+<body>
+<main>
+<h1>📊 招生成效追蹤・操作手冊</h1>
+<p><a href="index.html">← 回到工具</a></p>
+
+<section>
+<h2>這是什麼</h2>
+<p>同一門課在 FB、LINE、傳單、合作單位到處宣傳，最後到底是<b>哪個管道帶來報名</b>？哪個花錢最划算？這個工具幫你：</p>
+<ol>
+<li>為每個招生管道產生一條<b>專屬報名連結</b>和 <b>QR code</b>（同一份報名表，只是連結裡帶了不同的來源代碼）。</li>
+<li>報名一陣子後，把報名名單（Google 表單或報名系統匯出的 CSV／xlsx）讀進來。</li>
+<li>自動算出各管道的報名人數、報名率、每位報名成本、錄取／繳費／到課漏斗、每日報名趨勢，並預估截止前能不能額滿。</li>
+</ol>
+<p>不用註冊、不用安裝；資料只存在你的瀏覽器。第一次打開會先放一個虛構的範例班別，可以直接看分析長什麼樣子。</p>
+</section>
+
+<section>
+<h2><b>1</b>設定與專屬連結</h2>
+<ul>
+<li>填班別名稱、目標人數、開始招生日、報名截止日（預估額滿用）。</li>
+<li>選追蹤方式：
+<div class="tw"><table><tr><th>方式</th><th>適合</th><th>連結長什麼樣子</th></tr>
+<tr><td><b>Google 表單</b>（推薦）</td><td>用 Google 表單報名</td><td><code>…viewform?usp=pp_url&amp;entry.123=fbpage</code>，學員打開時「來源代碼」那題已經自動填好</td></tr>
+<tr><td>一般網址 ?src=</td><td>自己的報名系統、官網</td><td><code>…/apply?src=fbpage</code>，需要網站把 src 存進報名資料</td></tr>
+<tr><td>UTM 參數</td><td>網站有 Google Analytics</td><td><code>?utm_source=fbpage&amp;utm_medium=social&amp;utm_campaign=…</code></td></tr></table></div></li>
+<li><b>Google 表單設定（只要一次）</b>：報名表加一題簡答「來源代碼」（標示「請勿修改」）→ 表單右上角 ⋮ →「取得預先填入的連結」→ 那題填 <code>TEST</code> →「取得連結」→ 複製貼到工具。工具會找出那一題，每個管道的連結把 TEST 換成自己的代碼。</li>
+<li>點上方的管道按鈕加入（FB 粉專、FB 社團、FB／IG 廣告、LINE 官方帳號、LINE 群組、官網、電子報、台灣就業通、傳單、海報、合作單位、親友推薦、Google、YouTube），或「自訂管道」。</li>
+<li>每個管道可以填<b>花費</b>（廣告費、印刷費）、<b>點擊數</b>（從各平台後台抄）、<b>發布日</b>（看發出後 3 天內帶來多少報名）。</li>
+<li>📋 複製單一或全部連結；▦ 看 QR code 並下載 PNG；📦 一次下載全部 QR（ZIP，含連結清單）；🖨 列印 QR 一覽。<b>印出來請用手機實際掃一次</b>，確認來源代碼有帶進表單。</li>
+<li>下一期開課時，按「複製這班的管道」，管道與連結設定會帶到新班別（花費、點擊清空）。</li>
+</ul>
+</section>
+
+<section>
+<h2><b>2</b>匯入報名資料</h2>
+<ul>
+<li>Google 表單：回覆 →「在試算表中查看」→ 檔案 → 下載 → CSV 或 xlsx。也可以直接在試算表選取整個表格複製，按「貼上表格」。</li>
+<li>工具會自動找出各欄：<b>報名時間</b>（必要）、<b>來源代碼</b>、<b>從哪裡得知</b>（學員自填）、<b>狀態</b>（錄取／繳費／報到／取消）、<b>去重用</b>（Email 或電話）。找錯可以自己改，下面會預覽前 5 列。</li>
+<li>狀態欄寫到「錄取、正取」算錄取，「繳費、已付」算繳費，「報到、出席、結訓」算到課，「取消、放棄、退費」算取消。</li>
+<li>「合併」會把同一個 Email／電話的報名算一次（狀態取最後進度）；「取代」會清掉舊資料。</li>
+<li class="red">🔒 個資：檔案只在瀏覽器裡讀，不會上傳；匯入後只保留報名時間、來源代碼、得知管道、狀態，以及一串看不出原文的雜湊碼。姓名、電話、Email 不會存下來。</li>
+</ul>
+</section>
+
+<section>
+<h2><b>3</b>成效分析</h2>
+<ul>
+<li><b>四個重點數字</b>：報名人數、目標達成、每位報名成本、知道來源的比例。</li>
+<li><b>重點與建議</b>：報名最多的管道、最划算與最貴的管道、點擊多但報名少的管道、花了錢沒報名的管道、發布後 3 天帶動報名的貼文、未知來源太多、到課率偏低的管道，以及<b>照最近 7 天速度推算截止前會有幾人</b>。</li>
+<li><b>累積報名圖</b>：藍線是實際累積，橘色虛線是「照進度應該到幾人」（從開始招生日的 0 人到截止日的目標人數），▲ 是管道發布日。滑鼠移上去看當天人數。</li>
+<li><b>各管道報名人數、每位報名成本</b>長條圖，以及<b>管道明細表</b>（含報名後的狀態分布）。</li>
+<li>🖨 列印報告、⬇ 下載 CSV、📋 複製摘要（可貼到 LINE 或會議紀錄）。</li>
+</ul>
+<p><b>歸戶規則</b>：有來源代碼（從專屬連結報名）就算那個管道；沒有的話看學員自填的「從哪裡得知」，對得到清單上的管道就算那裡，對不到算「其他」；兩者都沒有算「未知來源」。</p>
+</section>
+
+<section>
+<h2>⚙ 常用設定</h2>
+<ul>
+<li><b>顯示</b>：標準字／大字。</li>
+<li><b>💾 備份與還原</b>：所有班別一起備份成 .json（不含姓名電話），換電腦時讀回來。</li>
+<li><b>📘 範例</b>：再載入一次虛構範例班別。</li>
+<li><b>🧹 清除全部資料</b>、<b>關於本工具</b>（操作手冊、創作者資訊、使用警語、加入主畫面、訪客數）。</li>
+</ul>
+</section>
+
+<section>
+<h2>⚠ 使用警語</h2>
+<ul>
+<li>報名名單含個人資料。檔案只在這台瀏覽器裡讀取、不會上傳；<b>原始名單請依個資法妥善保管</b>，用完的下載檔記得刪除。</li>
+<li>來源代碼放在連結裡，學員轉傳連結時會沿用原本的代碼，所以統計的是「從哪個連結報名」，不一定是最早看到的管道；學員自填的得知管道也可能不準。數字請當作趨勢參考。</li>
+<li>點擊數、花費要自己從各平台後台與帳單抄進來；能不能額滿的預估只依最近 7 天的速度推算，不代表實際結果。</li>
+<li>Google 表單的「來源代碼」題學員看得到也改得到，請標示「請勿修改」。</li>
+<li>範例資料全部虛構。</li>
+</ul>
+</section>
+
+<section id="creator">
+<h2>👤 關於創作者</h2>
+{{CREATOR}}
+</section>
+<p style="text-align:center"><a href="index.html">← 回到工具</a></p>
+</main>
+</body>
+</html>
