@@ -17,7 +17,7 @@ function today(){ return TODAY == null ? Date.now() : TODAY; }
 
 /* ---------- 狀態 ---------- */
 var firstRun = !lsGet('camps');
-var CAMPS = lsJson('camps', []).filter(function(x){ return x && x.id; }).map(function(x){ return {id:x.id, c:E.normalize(x.c)}; });
+var CAMPS = lsJson('camps', []).filter(function(x){ return x && x.id; }).map(function(x){ return {id:x.id, c:E.normalize(x.c), mk:typeof x.mk === 'string' ? x.mk : ''}; });
 var CUR = lsGet('cur');
 var STEP = lsGet('step') || 'setup';
 var IMP = null;
@@ -66,7 +66,7 @@ function render(){
     '<a class="ibtn" href="manual.html">📖 操作手冊</a><button class="ibtn" type="button" data-act="settings" aria-label="常用設定">⚙</button></div>' +
     '<p class="warn-line">報名名單只取時間、來源與狀態，姓名電話不會存下來；資料只在這台瀏覽器。<button type="button" data-act="warn">⚠ 使用警語</button></p>' +
     '<div class="campbar"><label class="small" for="campSel"><b>招生班別</b></label><select id="campSel" data-camp>' + CAMPS.map(function(x){ return '<option value="' + x.id + '"' + (x.id === CUR ? ' selected' : '') + '>' + esc(x.c.name || '（未命名班別）') + '</option>'; }).join('') + '</select>' +
-      '<button type="button" class="btn sm" data-act="newCamp">＋ 新班別</button><button type="button" class="btn sm" data-act="dupCamp">複製這班的管道</button><button type="button" class="btn sm red" data-act="delCamp">刪除這班</button></div>' +
+      '<button type="button" class="btn sm" data-act="newCamp">＋ 新班別</button><button type="button" class="btn sm" data-act="dupCamp">複製這班的管道</button><button type="button" class="btn sm red" data-act="delCamp">刪除這班</button>' + (MK ? '<button type="button" class="btn sm" data-act="mkPick">📥 從課程專案帶入</button><button type="button" class="btn sm" data-act="mkOut">📤 報名數存到課程專案</button>' : '') + '</div>' +
     '<div class="steps" role="tablist">' + STEPS.map(function(s){ return '<button type="button" class="step" role="tab" data-step="' + s[0] + '" aria-selected="' + (STEP === s[0]) + '"><b>' + s[1] + '</b>' + s[2] + '</button>'; }).join('') + '</div>' +
     '<div id="body"></div>' + footer();
   $('app').innerHTML = h;
@@ -287,6 +287,35 @@ async function allQr(){
   return out;
 }
 
+/* ---------- 課程專案（course-link.js；沒有也照常運作）：只帶課程名稱與報名網址進來，只寫報名「人數」出去，絕不寫個資 ---------- */
+var MK = window.MKCourse && window.MKCourse.store ? window.MKCourse : null;
+function campItem(){ return CAMPS.filter(function(y){ return y.id === CUR; })[0]; }
+function mkPickHtml(){
+  var list = MK.store.list(), cur = campItem().mk;
+  return '<h2>📥 從課程專案帶入</h2><p class="small">課程專案是同一台電腦上各辦訓工具共用的課程資料（課程招生海報產生器、出席簽到 QR、訓練證書產生器…）。會把這個班別的名稱和報名網址換成課程專案裡的；管道與報名資料不動。</p>' +
+    (list.length ? '<div class="stack" style="flex-direction:column;align-items:stretch">' + list.map(function(d){ return '<button type="button" class="btn" data-mkin="' + esc(d.id) + '">' + esc(MKCourse.label(d)) + ' <small>' + esc(MKCourse.when(d)) + (cur === d.id ? '・目前連結' : '') + '</small></button>'; }).join('') + '</div>' : '<p>這台電腦還沒有課程專案。可以在課程招生海報產生器按「📤 存成課程專案」，或在這裡按「📤 報名數存到課程專案」建立。</p>') +
+    '<div class="stack"><label class="btn">📂 開啟課程專案檔（.json）<input type="file" id="mkFile" accept=".json,application/json" hidden></label><button type="button" class="btn" data-act="close">取消</button></div>';
+}
+function mkApply(id){
+  var d = MK.store.get(id); if(!d){ toast('找不到這個課程專案'); return; }
+  var c = S(), co = d.course;
+  if(co.title) c.name = (co.title + (co.term ? ' ' + co.term : '')).slice(0, 120);
+  if(co.url){ c.url = co.url; c.param = ''; var dp = E.detectPrefill(c.url); if(dp) c.param = dp.param; }
+  campItem().mk = d.id; save(); closeModal(); render(); toast('已帶入「' + co.title + '」' + (co.url ? '（含報名網址）' : ''));
+}
+function mkExport(){
+  var c = S(), it = campItem();
+  if(!c.rows.length){ toast('這個班別還沒有匯入報名資料'); return; }
+  var A = E.analyze(c, today()), t = A.tot;
+  var res = {reg:t.reg, adm:t.adm, paid:t.paid, att:t.att, cancel:t.cancel, target:c.target === '' ? '' : +c.target, cost:t.cost,
+    channels:A.list.filter(function(b){ return b.reg || b.cancel; }).map(function(b){ return {n:b.n, reg:b.reg, adm:b.adm, paid:b.paid}; })};
+  var linked = it.mk && MK.store.get(it.mk), patch = {result:res};
+  if(!linked){ patch.course = {title:c.name}; if(c.url) patch.course.url = c.url; }
+  var doc = MK.store.save(linked ? it.mk : null, patch, 'enrollment');
+  if(!doc){ toast('存不進這台電腦（瀏覽器空間不足或封鎖網站資料）'); return; }
+  it.mk = doc.id; save();
+  openModal('<h2>📤 已存到課程專案</h2><p>「' + esc(MKCourse.label(doc)) + '」：報名 ' + t.reg + ' 人' + (t.adm ? '、錄取 ' + t.adm : '') + (t.paid ? '、繳費 ' + t.paid : '') + '。</p><p class="small">只存人數與各管道統計，<b>不含姓名、電話、Email</b>。學員名單請在出席簽到 QR 匯入。再按一次會更新同一個課程專案。</p><div class="stack"><button type="button" class="btn pri" data-act="close">好</button></div>');
+}
 var ACT = {
   close:closeModal, warn:showWarn, settings:openSettings, install:install,
   foldall:function(){ var ds = document.querySelectorAll('.set-sec'), any = Array.prototype.some.call(ds, function(d){ return !d.open; }); ds.forEach(function(d){ d.open = any; }); saveFold(); },
@@ -310,16 +339,18 @@ var ACT = {
   copySum:function(){ copyText(summaryText(), '已複製摘要，可以貼到 LINE 或會議紀錄'); },
   backup:function(){ download(new Blob([JSON.stringify({app:'enrollment-source-tracker', v:1, camps:CAMPS}, null, 1)], {type:'application/json'}), '招生成效追蹤_備份.json'); toast('已下載備份'); },
   loadSample:function(){ addCamp(E.sample(today())); closeModal(); STEP = 'report'; lsSet('step', STEP); render(); toast('已載入範例班別（虛構）'); },
+  mkPick:function(){ openModal(mkPickHtml()); }, mkOut:mkExport,
   wipeAll:function(){ confirmBox('清除全部資料？', '所有班別、管道與報名資料都會刪除，不能復原。', 'wipeOk', '全部清除'); },
   wipeOk:function(){ ['camps', 'cur', 'step', 'fold'].forEach(lsDel); var b = E.blank(); b.name = '新的招生班別'; CAMPS = [{id:newId(), c:b}]; CUR = CAMPS[0].id; STEP = 'setup'; IMP = null; save(); closeModal(); render(); toast('已清除'); }
 };
 
 document.addEventListener('click', function(e){
-  var t = e.target.closest('[data-act],[data-step],[data-mode],[data-preset],[data-copy],[data-qr],[data-delch],[data-setfs]');
+  var t = e.target.closest('[data-act],[data-step],[data-mode],[data-preset],[data-copy],[data-qr],[data-delch],[data-setfs],[data-mkin]');
   if(!t || t.disabled) return;
   if(t.tagName === 'A' && t.getAttribute('href') === '#') e.preventDefault();
   var d = t.dataset, c = S();
   if(d.act && ACT[d.act]){ e.preventDefault(); ACT[d.act](); return; }
+  if(d.mkin){ mkApply(d.mkin); return; }
   if(d.step){ STEP = d.step; lsSet('step', STEP); render(); return; }
   if(d.mode){ c.mode = d.mode; save(); renderSetup(); return; }
   if(d.preset){ E.addPreset(c, d.preset); save(); renderSetup(); return; }
@@ -336,6 +367,7 @@ document.addEventListener('input', function(e){
 });
 document.addEventListener('change', function(e){
   var t = e.target;
+  if(t.id === 'mkFile' && t.files[0]){ var mf = new FileReader(); mf.onload = function(){ t.value = ''; var r = MKCourse.fromText(mf.result); if(r.error){ toast(r.error); return; } var last = null; r.docs.forEach(function(x){ last = MK.store.put(x) || last; }); if(!last){ toast('存不進這台電腦（瀏覽器空間不足或封鎖網站資料）'); return; } if(r.docs.length === 1) mkApply(last.id); else openModal(mkPickHtml()); }; mf.readAsText(t.files[0]); return; }
   if(t.hasAttribute('data-camp')){ CUR = t.value; IMP = null; save(); render(); return; }
   if(t.dataset.col && IMP){ IMP.cols[t.dataset.col] = +t.value; $('impBox').innerHTML = impHtml(); return; }
   if(t.hasAttribute('data-impmode') && IMP){ IMP.mode = t.value; $('impBox').innerHTML = impHtml(); return; }

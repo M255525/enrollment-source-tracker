@@ -23,5 +23,9 @@
 - `python tools/e2e_et.py [輸出資料夾]`（先開 8895；線上版設 `ET_BASE`）：openpyxl 產生假 Google 表單 xlsx＋CSV（含重複、取消、自填）。警語、五件套、範例分析、兩種滑鼠提示、CSV、新班別、自動找來源題、預設／自訂管道、QR 彈窗＋**jsQR 掃得出專屬連結**、QR ZIP、欄位自動對應、預覽不露個資、**localStorage 與備份都沒有姓名 Email 電話**、去重狀態升級、自填歸戶、每位報名成本、xlsx 取代匯入、貼上、列印、切換班別、⚙、點空白不開設定、375px、無 console 錯誤。2026-11-18 全過（37 項）。
 - 真實 Google 表單預先填入連結、big5 編碼 CSV 未實測。
 
+## 課程專案（2026-11-19，`course-link.js` 是 `課程平台/course-link/` 正本的複製檔，別直接改）
+- 班別列「📥 從課程專案帶入」（`mkApply`：班別名稱＋報名網址，跑 `detectPrefill`）、「📤 報名數存到課程專案」（`mkExport`：`results.enrollment = {reg, adm, paid, att, cancel, target, cost, channels[{n, reg, adm, paid}]}`，**只有人數，不寫報名明細或個資**；沒連結時以班別名稱建立新課程專案）。連結存在 `CAMPS[i].mk`（`normalize` 會丟掉 c 裡不認識的欄位，所以放外層）。封鎖網站資料時按鈕不出現。跨工具測試 `課程平台/course-link/tools/e2e_link.py`。
+- service-worker activate 改成只刪自己前綴的舊版快取（v2）。
+
 ## 標準配備
 跑馬燈（不可關）、⚙ 常用設定（收合：顯示、💾 備份與還原、📘 範例、清除全部資料、關於本工具）、首訪警語＋頁面入口、`manual.html#creator`（改 `tools/manual_body.html` 後跑 `python tools/build_manual.py`）、PWA（`tools/make_icons.py`；上線改版升 `service-worker.js` 的 `CACHE_NAME`）、訪客計數器 `m255525.enrollmentsourcetracker`。無序號。

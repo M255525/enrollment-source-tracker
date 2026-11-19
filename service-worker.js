@@ -1,9 +1,10 @@
 // 加入主畫面＋離線可用。network-first＋同源快取備援，不快取跨網域請求。
-const CACHE_NAME = 'enrollment-source-tracker-v1';
+const CACHE_NAME = 'enrollment-source-tracker-v2';
 const SHELL_FILES = [
   './',
   './index.html',
   './data.js',
+  './course-link.js',
   './io.js',
   './app.js',
   './manual.html',
@@ -23,7 +24,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME && k.indexOf(CACHE_NAME.replace(/\d+$/, '')) === 0).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
