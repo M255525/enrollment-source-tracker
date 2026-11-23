@@ -63,7 +63,7 @@ var STEPS = [['setup', '1', '設定與專屬連結'], ['import', '2', '匯入報
 function render(){
   var c = S();
   var h = '<div class="top"><h1><span class="logo" aria-hidden="true"><i></i><i></i><i></i></span><span>招生成效追蹤 <small>每個管道一條專屬連結・匯入報名名單・看哪裡最有效</small></span></h1>' +
-    '<a class="ibtn" href="manual.html">📖 操作手冊</a><button class="ibtn" type="button" data-act="settings" aria-label="常用設定">⚙</button></div>' +
+    '<button class="ibtn lictop" type="button" id="licTop" data-act="settings" hidden></button><a class="ibtn" href="manual.html">📖 操作手冊</a><button class="ibtn" type="button" data-act="settings" aria-label="常用設定">⚙</button></div>' +
     '<p class="warn-line">報名名單只取時間、來源與狀態，姓名電話不會存下來；資料只在這台瀏覽器。<button type="button" data-act="warn">⚠ 使用警語</button></p>' +
     '<div class="campbar"><label class="small" for="campSel"><b>招生班別</b></label><select id="campSel" data-camp>' + CAMPS.map(function(x){ return '<option value="' + x.id + '"' + (x.id === CUR ? ' selected' : '') + '>' + esc(x.c.name || '（未命名班別）') + '</option>'; }).join('') + '</select>' +
       '<button type="button" class="btn sm" data-act="newCamp">＋ 新班別</button><button type="button" class="btn sm" data-act="dupCamp">複製這班的管道</button><button type="button" class="btn sm red" data-act="delCamp">刪除這班</button>' + (MK ? '<button type="button" class="btn sm" data-act="mkPick">📥 從課程專案帶入</button><button type="button" class="btn sm" data-act="mkOut">📤 報名數存到課程專案</button>' : '') + '</div>' +
@@ -71,6 +71,7 @@ function render(){
     '<div id="body"></div>' + footer();
   $('app').innerHTML = h;
   if(STEP === 'import') renderImport(); else if(STEP === 'report') renderReport(); else renderSetup();
+  showLicTop();
 }
 function footer(){
   return '<footer class="foot2">👤 創作者 Mark Tsai（蔡豐全）<a href="mailto:tsaimark@gmail.com">tsaimark@gmail.com</a><br><a href="manual.html">📖 操作手冊</a><a href="manual.html#creator">👤 創作者資訊</a><a href="#" data-act="warn">⚠ 使用警語</a>' +
@@ -264,6 +265,7 @@ function openSettings(){
   var xl = lsGet('fs') === 'xl';
   var h = '<div class="top"><h2 style="flex:1 1 0">⚙ 常用設定</h2><button type="button" class="btn sm" data-act="foldall">全部展開／收合</button></div>' +
     sec('view', '顯示', xl ? '大字' : '標準字', '<div class="stack"><button type="button" class="btn sm' + (xl ? '' : ' pri') + '" data-setfs="m">標準字</button><button type="button" class="btn sm' + (xl ? ' pri' : '') + '" data-setfs="xl">大字</button></div>') +
+    sec('lic', '🔑 登入序號', gateOpen ? (gateExp(LICINFO) ? '到期日 ' + expText(gateExp(LICINFO)) : '已登入') : '', '<span id="licBadge" class="lic ' + gateInfo.cls + '">' + esc(gateInfo.text) + '</span><div><span id="headcountBadge" class="lic ' + gateInfo.hcls + '">' + esc(gateInfo.head) + '</span></div><div class="stack" style="margin-top:.5rem"><button type="button" class="btn" data-act="logout">登出</button></div><p class="small">登出後這台電腦要重新輸入序號；班別、管道與報名資料不會刪掉。</p>') +
     sec('bak', '💾 備份與還原', CAMPS.length + ' 個班別', '<p class="small">備份檔包含所有班別的設定、管道與已匯入的報名列（不含姓名電話）。</p><div class="stack"><button type="button" class="btn" data-act="backup">⬇ 下載備份</button><label class="btn" style="cursor:pointer">⬆ 讀取備份<input type="file" accept=".json,application/json" data-file="backup" hidden></label></div>') +
     sec('ex', '📘 範例', '', '<p class="small">載入一個虛構的招生班別（8 個管道、40 多筆報名），看看分析長什麼樣子。</p><div class="stack"><button type="button" class="btn" data-act="loadSample">載入範例班別</button></div>') +
     sec('wipe', '🧹 清除全部資料', '', '<p class="small">刪除所有班別、管道與報名資料。</p><div class="stack"><button type="button" class="btn red" data-act="wipeAll">清除全部資料</button></div>') +
@@ -318,6 +320,7 @@ function mkExport(){
 }
 var ACT = {
   close:closeModal, warn:showWarn, settings:openSettings, install:install,
+  logout:function(){ closeModal(); gateLogout(); },
   foldall:function(){ var ds = document.querySelectorAll('.set-sec'), any = Array.prototype.some.call(ds, function(d){ return !d.open; }); ds.forEach(function(d){ d.open = any; }); saveFold(); },
   newCamp:function(){ var b = E.blank(); b.name = '新的招生班別'; ['fbpage', 'lineoa', 'web', 'friend'].forEach(function(k){ E.addPreset(b, k); }); addCamp(b); STEP = 'setup'; lsSet('step', STEP); render(); toast('已新增班別，先填名稱與報名網址'); },
   dupCamp:function(){ var c = S(), b = E.blank(); b.name = (c.name || '班別') + '（下一期）'; b.url = c.url; b.mode = c.mode; b.param = c.param; b.target = c.target; b.channels = c.channels.map(function(x){ return {code:x.code, n:x.n, cost:'', clicks:'', post:''}; }); addCamp(b); STEP = 'setup'; lsSet('step', STEP); render(); toast('已複製管道到新班別，花費與點擊已清空'); },
@@ -408,11 +411,143 @@ function initMarquee(){
 window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); window._dp = e; });
 if('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('service-worker.js').catch(function(){});
 
+/* ---------- 登入序號閘門（2026-11-23，複製自課程招生海報產生器） ----------
+   序號在試算表「辦訓相關」的分頁「招生成效追蹤」，和訓練證書產生器共用同一支 Apps Script（請求帶 sheet 指定分頁）。
+   開啟時 fail-closed：驗證沒通過就整個工具都不能用。已登入後的背景重驗只有連線失敗或 server_error 不上鎖（正在分析不要被打斷），
+   序號過期、查無序號才上鎖。序號存 etEntrySerial（刻意不用 et. 前綴，⚙ 清除全部資料不會登出）。 */
+var LICENSE_CHECK_URL = 'https://script.google.com/macros/s/AKfycbw2qz-sTKRVkVHGQZLTj73xlJdDiaHG8eNexjAN9XWMrly5BnxVcP8dC0qE3kADHeIl/exec';
+var LICENSE_SHEET = '招生成效追蹤';
+var SERIAL_KEY = 'etEntrySerial', CLIENT_KEY = 'etEntryClientId', RECHECK_MS = 20 * 60 * 1000;
+// 公開在登入頁的免費試用序號（和課程招生海報產生器同一組字串，查的是本工具分頁那一列：到 2027/5/17、人數上限 10）。停用時改成 '' 就不顯示。
+var FREE_SERIAL = 'FLf9M6zAX8pe';
+function rawGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function rawSet(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
+function rawDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+var gateOpen = false, LICINFO = null;
+var gateInfo = {cls:'', text:'尚未驗證', hcls:'', head:''};
+var REASON_LABEL = {
+  missing_serial:'請輸入登入序號',
+  serial_not_found:'查無此序號，請確認有沒有打錯',
+  expired:'這組序號已經過期了',
+  network_error:'連不上網路，請確認網路後再按一次確認',
+  server_error:'驗證暫時失敗，請等一下再試'
+};
+function clientId(){
+  var id = rawGet(CLIENT_KEY);
+  if(!id){ id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'c-' + Date.now() + '-' + Math.random().toString(36).slice(2); rawSet(CLIENT_KEY, id); }
+  return id;
+}
+function gateStatus(cls, text){
+  gateInfo.cls = cls; gateInfo.text = text;
+  var e = $('entryGateStatus'); e.className = 'lic ' + cls; e.textContent = text;
+  var b = $('licBadge'); if(b){ b.className = 'lic ' + cls; b.textContent = text; }
+}
+function gateHead(l){
+  var limited = l && typeof l.headcountLimit === 'number', free = l && l.valid && !limited, left = limited ? Math.max(l.headcountRemaining || 0, 0) : 0;
+  gateInfo.head = !l ? '' : free ? '此序號不限登入人數' : limited ? '此序號還可登入 ' + left + ' 人（上限 ' + l.headcountLimit + ' 人）' : '';
+  gateInfo.hcls = free || left > 0 ? 'ok' : 'bad';
+  var g = $('entryGateHeadcount'); g.textContent = l && l.reason === 'headcount_exceeded' ? gateInfo.head : '';
+  var b = $('headcountBadge'); if(b){ b.className = 'lic ' + gateInfo.hcls; b.textContent = gateInfo.head; }
+}
+function checkLicense(serial, attempt, renew){
+  attempt = attempt || 1;
+  if(!LICENSE_CHECK_URL) return Promise.reject(new Error('尚未設定授權伺服器'));
+  var ctl = window.AbortController ? new AbortController() : null, tm = ctl && setTimeout(function(){ ctl.abort(); }, 20000);
+  // Apps Script 不回應 OPTIONS 預檢，所以不設 Content-Type
+  return fetch(LICENSE_CHECK_URL, {method:'POST', body:JSON.stringify({serial:serial, sheet:LICENSE_SHEET, clientId:clientId(), renew:!!renew}), signal:ctl ? ctl.signal : undefined}).catch(function(){
+    throw new Error(REASON_LABEL.network_error);
+  }).then(function(r){
+    clearTimeout(tm);
+    if(!r.ok) throw new Error(REASON_LABEL.server_error);
+    return r.text();
+  }).then(function(t){
+    var d; try{ d = JSON.parse(t); }catch(e){ d = null; }
+    if(!d || typeof d.valid !== 'boolean'){
+      if(attempt < 3) return checkLicense(serial, attempt + 1, renew);
+      throw new Error(REASON_LABEL.server_error);
+    }
+    return d;
+  });
+}
+// 到期日：後端回傳結束日期當天 00:00（台北）的 ISO，當天結束前都有效。用瀏覽器本地日期顯示、算剩幾天。
+function gateExp(l){
+  if(!l || !l.expiresAt) return null;
+  var e = new Date(l.expiresAt); if(isNaN(e)) return null;
+  var end = new Date(e.getFullYear(), e.getMonth(), e.getDate()), t = new Date(Date.now()), today = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  return {y:end.getFullYear(), m:end.getMonth() + 1, d:end.getDate(), left:Math.max(Math.round((end - today) / 86400000), 0)};
+}
+function expText(x){ return x.y + '/' + x.m + '/' + x.d; }
+function gateDays(l){
+  var x = gateExp(l); if(!x) return '序號有效';
+  return '序號有效，可以用到 ' + expText(x) + '（還有 ' + x.left + ' 天）';
+}
+function showLicTop(){
+  var el = $('licTop'); if(!el) return;
+  var x = gateExp(LICINFO);
+  el.hidden = !gateOpen || !LICINFO;
+  if(el.hidden) return;
+  el.className = 'ibtn lictop' + (x && x.left <= 14 ? ' soon' : '');
+  el.innerHTML = x ? '🔑 序號到期日 <b>' + expText(x) + '</b><small>（還有 ' + x.left + ' 天）</small>' : '🔑 序號有效';
+  el.title = '登入序號的使用期限' + (typeof LICINFO.headcountLimit === 'number' ? '；此序號同時最多 ' + LICINFO.headcountLimit + ' 人登入' : '') + '。點一下看詳細';
+}
+function gateUnlock(l){
+  LICINFO = l; gateStatus('ok', '✓ ' + gateDays(l)); gateHead(l);
+  $('entryGate').classList.add('hidden');
+  var first = !gateOpen; gateOpen = true; showLicTop();
+  if(first && !lsGet('warnSeen')){ showWarn(); lsSet('warnSeen', '1'); } // 首訪警語改在第一次解鎖後才跳
+}
+function gateLock(text, l){
+  gateOpen = false; LICINFO = null; showLicTop();
+  gateStatus('bad', '✗ ' + text); gateHead(l && l.reason === 'headcount_exceeded' ? l : null);
+  closeModal(); $('entryGate').classList.remove('hidden');
+}
+function gateRun(serial, renew){
+  if(!serial){ gateLock(REASON_LABEL.missing_serial); return Promise.resolve(); }
+  return checkLicense(serial, 1, renew).then(function(l){
+    if(l.valid) gateUnlock(l);
+    else if(l.reason === 'server_error' && gateOpen) return;
+    else gateLock(REASON_LABEL[l.reason] || l.message || '序號驗證失敗', l);
+  }).catch(function(e){ if(!gateOpen) gateLock(e.message); });
+}
+function gateRenew(){ var s = rawGet(SERIAL_KEY); if(s && gateOpen) gateRun(s, true); }
+function gateRelease(serial){
+  if(!serial || !navigator.sendBeacon || !LICENSE_CHECK_URL) return;
+  try{ navigator.sendBeacon(LICENSE_CHECK_URL, new Blob([JSON.stringify({serial:serial, sheet:LICENSE_SHEET, clientId:clientId(), release:true})], {type:'text/plain'})); }catch(e){}
+}
+function gateLogout(){
+  gateRelease(rawGet(SERIAL_KEY)); rawDel(SERIAL_KEY);
+  $('entryGateSerial').value = ''; gateLock('已登出，請輸入登入序號');
+}
+function initGate(){
+  var input = $('entryGateSerial'), btn = $('btnEntryGateConfirm');
+  btn.onclick = function(){ var s = input.value.trim(); rawSet(SERIAL_KEY, s); gateStatus('', '驗證中…'); gateRun(s, false); };
+  input.addEventListener('keydown', function(e){ if(e.key === 'Enter') btn.click(); });
+  if(FREE_SERIAL){
+    $('gateFreeCode').textContent = FREE_SERIAL;
+    $('btnGateFree').onclick = function(){ input.value = FREE_SERIAL; btn.click(); };
+    $('btnGateFreeCopy').onclick = function(){
+      var b = $('btnGateFreeCopy'), done = function(){ b.textContent = '已複製 ✓'; setTimeout(function(){ b.textContent = '複製序號'; }, 2000); }; // toast 會被閘門蓋住，所以改按鈕文字
+      var fb = function(){ var t = document.createElement('textarea'); t.value = FREE_SERIAL; document.body.appendChild(t); t.select(); try{ document.execCommand('copy'); }catch(e){} t.remove(); done(); };
+      if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(FREE_SERIAL).then(done, fb); else fb();
+    };
+  } else $('gateFree').hidden = true;
+  function maskSerial(hide){ // 預設隱藏，免得旁人看到；要核對時才按顯示
+    var t = $('btnEntryGateToggle');
+    input.type = hide ? 'password' : 'text';
+    t.textContent = hide ? '👁 顯示' : '🙈 隱藏'; t.setAttribute('aria-pressed', String(!hide)); t.setAttribute('aria-label', hide ? '顯示序號' : '隱藏序號');
+  }
+  $('btnEntryGateToggle').onclick = function(){ maskSerial(input.type === 'text'); };
+  btn.addEventListener('click', function(){ maskSerial(true); });
+  input.value = rawGet(SERIAL_KEY) || '';
+  if(input.value){ gateStatus('', '驗證中…'); gateRun(input.value, false); }
+  setInterval(gateRenew, RECHECK_MS);
+  window.addEventListener('pagehide', function(){ gateRelease(rawGet(SERIAL_KEY)); }); // 送不出去也沒關係，後端 40 分鐘逾時兜底
+}
+
 applyView();
 if(firstRun || !CAMPS.length){ CAMPS = []; addCamp(E.sample(today())); STEP = 'report'; lsSet('step', STEP); }
 if(!camp()){ CUR = CAMPS[0].id; save(); }
 if(['setup', 'import', 'report'].indexOf(STEP) < 0) STEP = 'setup';
-render(); initMarquee();
-if(!lsGet('warnSeen')){ showWarn(); lsSet('warnSeen', '1'); }
-window._et = {get C(){ return S(); }, get CAMPS(){ return CAMPS; }, get IMP(){ return IMP; }, ACT:ACT, loadTable:loadTable, render:render, setToday:function(t){ TODAY = t; render(); }};
+render(); initMarquee(); initGate();
+window._et = {get gateOpen(){ return gateOpen; }, get C(){ return S(); }, get CAMPS(){ return CAMPS; }, get IMP(){ return IMP; }, ACT:ACT, loadTable:loadTable, render:render, setToday:function(t){ TODAY = t; render(); }};
 })();

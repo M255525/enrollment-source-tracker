@@ -1,6 +1,7 @@
 # 端對端測試：先開 8895（或設 ET_BASE 測線上版），python tools/e2e_et.py [輸出資料夾]
+# 登入序號用 page.route 假造授權回應：FLf9M6zAX8pe／GOOD＝有效、OLD＝過期、FULL＝額滿、其他＝查無（不會碰到真的試算表）
 # 會用 openpyxl 產生一份假的 Google 表單回覆 xlsx 與 CSV 來測匯入（姓名電話全部虛構）。
-import asyncio, io, os, sys, tempfile, zipfile
+import asyncio, io, json, os, sys, tempfile, zipfile
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
 from playwright.async_api import async_playwright
 
@@ -34,16 +35,59 @@ def make_files():
         xp = None
     return csvp, xp
 
+LIC = 'https://script.google.com/macros/s/AKfycbw2qz-sTKRVkVHGQZLTj73xlJdDiaHG8eNexjAN9XWMrly5BnxVcP8dC0qE3kADHeIl/exec'
+LIC_REQ = []
+async def fake_license(route):
+    try: body = json.loads(route.request.post_data or '{}')
+    except Exception: body = {}
+    LIC_REQ.append(body)
+    sn = body.get('serial', '')
+    if body.get('release'): r = {'ok': True}
+    elif sn in ('FLf9M6zAX8pe', 'GOOD'): r = {'valid': True, 'reason': 'ok', 'activatedAt': '2026-11-16T16:00:00.000Z', 'expiresAt': '2027-05-16T16:00:00.000Z', 'headcountLimit': 10, 'headcountUsed': 1, 'headcountRemaining': 9}
+    elif sn == 'OLD': r = {'valid': False, 'reason': 'expired', 'expiresAt': '2026-01-01T16:00:00.000Z'}
+    elif sn == 'FULL': r = {'valid': False, 'reason': 'headcount_exceeded', 'message': '已達上限', 'headcountLimit': 10, 'headcountUsed': 10, 'headcountRemaining': 0}
+    else: r = {'valid': False, 'reason': 'serial_not_found'}
+    await route.fulfill(status=200, content_type='application/json', body=json.dumps(r))
+
 async def main():
     csvp, xp = make_files()
     async with async_playwright() as p:
         b = await p.chromium.launch()
         ctx = await b.new_context(viewport={'width': 1366, 'height': 900}, accept_downloads=True)
+        await ctx.route(LIC + '*', fake_license)
         pg = await ctx.new_page()
         errs = []
         pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' and 'visitor-badge' not in m.text and 'script.google' not in m.text else None)
-        await pg.goto(BASE + 'index.html'); await pg.wait_for_timeout(1200)
+        await pg.goto(BASE + 'index.html'); await pg.wait_for_function('window._et')
+        # 登入序號閘門
+        ok(await pg.is_visible('#entryGate') and not await pg.evaluate('window._et.gateOpen'), '沒登入：閘門擋住整個工具')
+        ok(not await pg.is_visible('#modal.show'), '閘門擋住時不先跳警語')
+        ok(await pg.text_content('#gateFreeCode') == 'FLf9M6zAX8pe', '登入頁顯示免費試用序號')
+        ok(await pg.get_attribute('#entryGateSerial', 'type') == 'password', '序號輸入框預設遮住')
+        await pg.click('#btnEntryGateConfirm')
+        ok('請輸入登入序號' in await pg.text_content('#entryGateStatus'), '空白序號：提示要輸入')
+        await pg.fill('#entryGateSerial', 'WRONG'); await pg.click('#btnEntryGateConfirm')
+        await pg.wait_for_function('document.getElementById("entryGateStatus").textContent.includes("查無")')
+        ok(await pg.is_visible('#entryGate'), '錯的序號：顯示查無、仍擋住')
+        await pg.fill('#entryGateSerial', 'OLD'); await pg.click('#btnEntryGateConfirm')
+        await pg.wait_for_function('document.getElementById("entryGateStatus").textContent.includes("過期")')
+        ok(await pg.is_visible('#entryGate'), '過期序號：擋住')
+        await pg.fill('#entryGateSerial', 'FULL'); await pg.press('#entryGateSerial', 'Enter')
+        await pg.wait_for_function('document.getElementById("entryGateHeadcount").textContent.includes("上限")')
+        ok(await pg.is_visible('#entryGate'), '額滿（按 Enter 送出）：顯示人數上限、擋住')
+        await pg.set_viewport_size({'width': 375, 'height': 812}); await pg.wait_for_timeout(200)
+        await pg.screenshot(path=os.path.join(OUT, 'gate_mobile.png'))
+        ok(await pg.evaluate('document.documentElement.scrollWidth') <= 375, '375px 登入頁無橫向捲動')
+        await pg.set_viewport_size({'width': 1366, 'height': 900})
+        await pg.screenshot(path=os.path.join(OUT, 'gate.png'))
+        await pg.click('#btnGateFree')
+        await pg.wait_for_function('window._et.gateOpen')
+        ok(not await pg.is_visible('#entryGate') and await pg.evaluate('localStorage.getItem("etEntrySerial")') == 'FLf9M6zAX8pe', '用免費序號登入：解鎖並記住序號')
+        ok(all(r.get('sheet') == '招生成效追蹤' for r in LIC_REQ if r.get('serial')), '驗證請求都帶分頁「招生成效追蹤」')
+        lt = await pg.text_content('#licTop')
+        ok(await pg.is_visible('#licTop') and '2027/5/17' in lt, '上方顯示序號到期日：' + lt)
+        await pg.wait_for_timeout(300)
         ok(await pg.is_visible('#modal.show') and '使用警語' in await pg.inner_text('#modalBox'), '首訪跳出使用警語')
         await pg.click('[data-act="close"]')
         foot = await pg.inner_html('.foot2')
@@ -132,7 +176,7 @@ async def main():
         ok('AI 工具入門' in await pg.evaluate('window._et.C.name'), '切換回範例班別')
         await pg.click('[data-act="settings"]')
         s = await pg.inner_text('#modalBox')
-        ok(all(k in s for k in ['顯示', '備份與還原', '範例', '清除全部資料', '關於本工具']), '⚙ 收合區塊齊全')
+        ok(all(k in s for k in ['登入序號', '2027/5/17', '顯示', '備份與還原', '範例', '清除全部資料', '關於本工具']), '⚙ 收合區塊齊全')
         ok(await pg.evaluate("document.querySelectorAll('.set-sec[open]').length") == 0, '⚙ 預設收合')
         await pg.click('[data-sec="bak"] > summary')
         async with pg.expect_download() as d: await pg.click('[data-act="backup"]')
@@ -141,6 +185,17 @@ async def main():
         await pg.click('#modalBox [data-act="close"]')
         await pg.click('.foot2'); await pg.wait_for_timeout(150)
         ok(not await pg.is_visible('#modal.show'), '點空白處不會開設定')
+
+        # 重新整理自動登入；清除全部資料不會登出；登出要重新輸入
+        await pg.reload(); await pg.wait_for_function('window._et && window._et.gateOpen')
+        ok(not await pg.is_visible('#entryGate'), '重新整理：記住的序號自動登入')
+        await pg.click('.top [data-act="settings"][aria-label]'); await pg.click('[data-sec="wipe"] > summary'); await pg.click('[data-act="wipeAll"]'); await pg.click('[data-act="wipeOk"]'); await pg.wait_for_timeout(300)
+        ok(await pg.evaluate('window._et.gateOpen') and await pg.evaluate('localStorage.getItem("etEntrySerial")') == 'FLf9M6zAX8pe', '清除全部資料不會登出')
+        await pg.click('.top [data-act="settings"][aria-label]'); await pg.click('[data-sec="lic"] > summary'); await pg.click('[data-act="logout"]'); await pg.wait_for_timeout(300)
+        ok(await pg.is_visible('#entryGate') and not await pg.evaluate('window._et.gateOpen') and await pg.evaluate('localStorage.getItem("etEntrySerial")') is None, '登出：回到閘門、序號清掉')
+        ok(any(r.get('release') and r.get('sheet') == '招生成效追蹤' for r in LIC_REQ), '登出時送出釋出名額（帶分頁）')
+        await pg.fill('#entryGateSerial', 'GOOD'); await pg.click('#btnEntryGateConfirm'); await pg.wait_for_function('window._et.gateOpen')
+        await pg.evaluate("window._et.ACT.loadSample()"); await pg.wait_for_timeout(300)
 
         # 手機
         await pg.set_viewport_size({'width': 375, 'height': 812}); await pg.wait_for_timeout(300)

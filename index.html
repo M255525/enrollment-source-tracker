@@ -172,10 +172,38 @@ table.t tfoot td{font-weight:900;border-top:1.5px solid var(--ink);border-bottom
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}#marqueeTrack{animation:marquee-scroll 90s linear infinite!important}}
 @page{size:A4 portrait;margin:12mm}
+/* 登入序號閘門（2026-11-23，比照課程招生海報產生器） */
+#entryGate{position:fixed;inset:0;z-index:3200;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto;background-color:var(--bg);
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:32px 32px}
+#entryGate.hidden{display:none}
+body:has(#entryGate:not(.hidden)){overflow:hidden}
+.gate-box{position:relative;background:var(--card);color:var(--ink);border:2px solid var(--ink);border-radius:.6rem;box-shadow:6px 6px 0 rgba(11,11,11,.12);padding:1.6rem 1.3rem 1.2rem;width:470px;max-width:calc(100% - 16px);text-align:center;margin:auto}
+.gate-box .logo{margin:0 auto .6rem}
+.gate-box h2{font-size:1.45rem;font-weight:900;margin-bottom:.3rem}
+.gate-desc{font-size:.9rem;color:var(--ink2);margin:.3rem 0 .7rem}
+.gate-row{display:flex;gap:.35rem;margin:.5rem 0}
+#entryGateSerial{flex:1 1 0;min-width:0;min-height:3rem;font-weight:700;text-align:center;padding:.3rem .5rem;border:2px solid var(--ink);border-radius:.5rem;background:#fff;color:#111;letter-spacing:.06em}
+#btnEntryGateToggle{flex:none;font-size:.8rem;padding:0 .6rem}
+#btnEntryGateConfirm{width:100%;min-height:3rem;font-size:1.05rem}
+.gate-foot{font-size:.76rem;color:var(--ink2);margin:.8rem 0 0}
+.gate-free{margin-top:.9rem;padding:.7rem .75rem;border:2px dashed var(--s2);border-radius:.5rem;background:#FFF4EC;text-align:center}
+.gate-free .gf-t{font-weight:900;font-size:.95rem}
+.gate-free .gf-code{display:inline-block;margin:.35rem 0;font:900 1.25rem/1.2 ui-monospace,Consolas,'Courier New',monospace;letter-spacing:.08em;background:#fff;border:1.5px solid var(--line);border-radius:.4rem;padding:.25rem .7rem;user-select:all;color:#111}
+.gate-free .gf-n{font-size:.76rem;color:var(--ink2);margin:.3rem 0 0}
+.gate-free .stack{justify-content:center;margin-top:.35rem}
+.lic{display:inline-block;font-size:.8rem;font-weight:700;padding:.2rem .6rem;border-radius:.5rem;border:2px solid var(--line);margin-top:.55rem;overflow-wrap:anywhere}
+.lic.ok{color:var(--good);border-color:var(--good);background:var(--good-bg)}
+.lic.bad{color:var(--bad);border-color:var(--bad);background:var(--bad-bg)}
+#entryGateHeadcount:empty,#headcountBadge:empty{display:none}
+.lictop{border-color:var(--s1);background:var(--s1-soft);color:var(--tip)}
+.lictop b{color:var(--ink);margin-left:.15rem}
+.lictop small{font-size:.75rem;color:var(--ink2);margin-left:.1rem}
+.lictop.soon{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+@media (max-width:560px){.lictop small{display:none}}
 @media print{
   html,body{background:#fff!important;padding:0!important}
   body{background-image:none!important}
-  #app,#marqueeBar,#modal,.toast,#tip{display:none!important}
+  #app,#marqueeBar,#modal,.toast,#tip,#entryGate{display:none!important}
   #printArea{display:block}
   #printArea .card{break-inside:avoid;border-color:#bbb;margin-bottom:4mm}
   #printArea .grid{display:block}
@@ -188,6 +216,27 @@ table.t tfoot td{font-weight:900;border-top:1.5px solid var(--ink);border-bottom
 </style>
 </head>
 <body>
+<div id="entryGate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <div class="gate-box">
+    <span class="logo" aria-hidden="true"><i></i><i></i><i></i></span>
+    <h2 id="gateTitle">招生成效追蹤</h2>
+    <p class="gate-desc">請輸入登入序號，再按「確認」。這台電腦會記住，之後不用再輸入。登入後畫面上方會顯示序號的到期日。</p>
+    <div class="gate-row">
+      <input type="password" id="entryGateSerial" placeholder="請輸入登入序號" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="登入序號">
+      <button class="btn" type="button" id="btnEntryGateToggle" aria-pressed="false" aria-label="顯示序號">👁 顯示</button>
+    </div>
+    <button class="btn pri" type="button" id="btnEntryGateConfirm">確認</button>
+    <span id="entryGateStatus" class="lic" role="status">尚未驗證</span>
+    <div><span id="entryGateHeadcount" class="lic" aria-live="polite"></span></div>
+    <div class="gate-free" id="gateFree">
+      <div class="gf-t">🎁 免費試用序號</div>
+      <div class="gf-code" id="gateFreeCode"></div>
+      <div class="stack"><button class="btn sm pri" type="button" id="btnGateFree">用免費序號登入</button><button class="btn sm" type="button" id="btnGateFreeCopy">複製序號</button></div>
+      <p class="gf-n">登入後畫面上方會顯示到期日。免費序號同時使用的人數有上限，額滿時請稍後再試。</p>
+    </div>
+    <p class="gate-foot">沒有序號？請洽 tsaimark@gmail.com｜<a href="manual.html" target="_blank" rel="noopener">📖 操作手冊</a></p>
+  </div>
+</div>
 <div id="marqueeBar"><div id="marqueeTrack"></div></div>
 <main id="app"></main>
 <div id="printArea" aria-hidden="true"></div>
